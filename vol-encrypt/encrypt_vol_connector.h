@@ -17,5 +17,17 @@
 #define ENCRYPT_VOL_CONNECTOR_VALUE    ((H5VL_class_value_t)12202)
 #define ENCRYPT_VOL_CONNECTOR_NAME     "encrypt_vol_connector"
 
+#define ENCRYPT_VOL_PROPERTY_NAME      "encrypt_vol_property"
+#define ENCRYPT_VOL_KEY_PROPERTY_NAME      "encrypt_vol_key_property"
+
+struct encrypt_vol_property {
+    int alg;
+};
+
+struct encrypt_vol_key_property {
+    char* key;
+    unsigned long key_size;
+};
+
 #endif /* _encrypt_vol_connector_H */
 

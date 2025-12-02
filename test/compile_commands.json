@@ -1,0 +1,26 @@
+[
+{
+  "directory": "/home/isaiah/Documents/Research/OSU/SecurityProject/code/encryption-vol/test/out",
+  "command": "/usr/bin/cc -DH5_BUILT_AS_DYNAMIC_LIB -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_POSIX_C_SOURCE=200809L -isystem /home/isaiah/Documents/Research/OSU/SecurityProject/code/encryption-vol/dependencies/hdf5-ins/include  -o CMakeFiles/test-vol-encrypt-write.dir/test-write.c.o -c /home/isaiah/Documents/Research/OSU/SecurityProject/code/encryption-vol/test/test-write.c",
+  "file": "/home/isaiah/Documents/Research/OSU/SecurityProject/code/encryption-vol/test/test-write.c",
+  "output": "CMakeFiles/test-vol-encrypt-write.dir/test-write.c.o"
+},
+{
+  "directory": "/home/isaiah/Documents/Research/OSU/SecurityProject/code/encryption-vol/test/out",
+  "command": "/usr/bin/cc -DH5_BUILT_AS_DYNAMIC_LIB -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_POSIX_C_SOURCE=200809L -isystem /home/isaiah/Documents/Research/OSU/SecurityProject/code/encryption-vol/dependencies/hdf5-ins/include  -o CMakeFiles/test-vol-encrypt-read.dir/test-read.c.o -c /home/isaiah/Documents/Research/OSU/SecurityProject/code/encryption-vol/test/test-read.c",
+  "file": "/home/isaiah/Documents/Research/OSU/SecurityProject/code/encryption-vol/test/test-read.c",
+  "output": "CMakeFiles/test-vol-encrypt-read.dir/test-read.c.o"
+},
+{
+  "directory": "/home/isaiah/Documents/Research/OSU/SecurityProject/code/encryption-vol/test/out/encryption_wrapper",
+  "command": "/usr/bin/cc    -o CMakeFiles/enc_wrapper.dir/enc_wrapper.c.o -c /home/isaiah/Documents/Research/OSU/SecurityProject/code/encryption-vol/test/encryption_wrapper/enc_wrapper.c",
+  "file": "/home/isaiah/Documents/Research/OSU/SecurityProject/code/encryption-vol/test/encryption_wrapper/enc_wrapper.c",
+  "output": "encryption_wrapper/CMakeFiles/enc_wrapper.dir/enc_wrapper.c.o"
+},
+{
+  "directory": "/home/isaiah/Documents/Research/OSU/SecurityProject/code/encryption-vol/test/out/encryption_wrapper",
+  "command": "/usr/bin/cc    -o CMakeFiles/enc_wrapper.dir/gcrypt_impl/enc_gcrypt.c.o -c /home/isaiah/Documents/Research/OSU/SecurityProject/code/encryption-vol/test/encryption_wrapper/gcrypt_impl/enc_gcrypt.c",
+  "file": "/home/isaiah/Documents/Research/OSU/SecurityProject/code/encryption-vol/test/encryption_wrapper/gcrypt_impl/enc_gcrypt.c",
+  "output": "encryption_wrapper/CMakeFiles/enc_wrapper.dir/gcrypt_impl/enc_gcrypt.c.o"
+}
+]
