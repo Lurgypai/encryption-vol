@@ -17,8 +17,8 @@
 
 /* This connector's header */
 #include "encrypt_vol_connector.h"
-#include "enc_wrapper.h"
-#include "gcrypt_impl/enc_gcrypt.h"
+#include "encryption_wrapper/enc_wrapper.h"
+#include "encryption_wrapper/gcrypt_impl/enc_gcrypt.h"
 
 #include <hdf5.h>
 #include <stdlib.h>

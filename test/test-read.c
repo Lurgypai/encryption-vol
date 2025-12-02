@@ -3,9 +3,9 @@
 #include <stdlib.h>
 
 #include "../vol-encrypt/encrypt_vol_connector.h"
-#include "../dependencies/encryption_wrapper/enc_wrapper.h"
-#include "../dependencies/encryption_wrapper/enc_algorithm.h"
-#include "../dependencies/encryption_wrapper/gcrypt_impl/enc_gcrypt.h"
+#include "encryption_wrapper/enc_wrapper.h"
+#include "encryption_wrapper/enc_algorithm.h"
+#include "encryption_wrapper/gcrypt_impl/enc_gcrypt.h"
 
 #define FILE_NAME "example.h5"
 #define DATASET_COUNT 3
