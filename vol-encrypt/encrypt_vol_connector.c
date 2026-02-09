@@ -224,6 +224,7 @@ file_dataset_spec_t* make_dataset_spec(char* name, size_t read_offset, size_t si
     spec->read_offset = read_offset;
     spec->size = size;
     spec->alg = alg;
+    spec->next = NULL;
     return spec;
 }
 

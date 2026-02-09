@@ -8,6 +8,7 @@ if [[ ! -f ${1} ]]; then
     exit 1
 fi
 
+# gdb --args out/benchmark ${1}
 out/benchmark ${1}
 
-rm example.h5
+rm output.h5

@@ -121,12 +121,14 @@ int main(int argc, char** argv) {
 
     /* =========================== PREP FILE ========================== */
     hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
-    hid_t fileId = H5Fcreate("output.hdf5", H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
+    hid_t fileId = H5Fcreate("output.h5", H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
     H5Pclose(fapl);
     /* =========================== END PREP FILE ========================== */
 
 
     /* =========================== PREP DATASETS ========================== */
+    Timer metaTimer;
+    metaTimer.reset();
     // setup dummy key
     enc_load_library(enc_get_gcrypt());
     enc_prepare(aes256);
@@ -152,7 +154,10 @@ int main(int argc, char** argv) {
         hsize_t spaceSize[1] = {datasetTemplate.count};
         hid_t fSpace = H5Screate_simple(1, spaceSize, NULL);
 
-        if(datasetTemplate.algorithm == "aes256") {
+        if(datasetTemplate.algorithm == "none") {
+            enc_prop.alg = -1;
+        }
+        else if(datasetTemplate.algorithm == "aes256") {
             enc_prop.alg = aes256;
         } else if (datasetTemplate.algorithm == "chacha20") {
             enc_prop.alg = chacha20;
@@ -165,13 +170,18 @@ int main(int argc, char** argv) {
 
         dsetId = H5Dcreate2(fileId, datasetName.c_str(), H5T_NATIVE_INT, fSpace, H5P_DEFAULT, dcpl, dapl);
     }
+    double metaTime = metaTimer.getElapsed();
     /* =========================== END PREP DATASETS ========================== */
 
 
     /* =========================== PERFORM IO ========================== */
     Timer writeTimer;
-    double writeTime = 0.0;
-    
+    Timer datasetTimer;
+    double datasetTime{0};
+    writeTimer.reset();
+
+    // re-use buffer
+    std::vector<char> plaintextBuffer;
     for(int i = 0; i != datasetTemplates.size(); ++i) {
         const auto& datasetTemplate = datasetTemplates[i];
         const auto& dsetId = datasetIds[i];
@@ -180,20 +190,29 @@ int main(int argc, char** argv) {
         const std::size_t ioSize = ioCount * SHARED_BLOCK_SIZE;
 
         // allocate a buffers
-        std::vector<char> plaintextBuffer;
         plaintextBuffer.resize(ioSize);
 
         /* --------------- IO --------------- */
-        writeTimer.reset();
-
+        datasetTimer.reset();
         H5Dwrite(dsetId, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, plaintextBuffer.data());
-        writeTime += writeTimer.getElapsed();
+        datasetTime += datasetTimer.getElapsed();
     }
+    Timer flushTimer;
+    flushTimer.reset();
+    H5Fclose(fileId);
+    double flushTime = flushTimer.getElapsed();
+    double writeTime = writeTimer.getElapsed();
     /* =========================== END PERFORM IO ========================== */
 
     double writeTimeS = writeTime / (1000.0 * 1000.0 * 1000.0);
+    double metaTimeS = metaTime / (1000.0 * 1000.0 * 1000.0);
+    double datasetTimeS = datasetTime / (1000.0 * 1000.0 * 1000.0);
+    double flushTimeS = flushTime / (1000.0 * 1000.0 * 1000.0);
 
-    std::cout << "Write time: " << writeTimeS << '\n';
+    std::cout << "write time: " << writeTimeS << '\n';
+    std::cout << "meta write time: " << metaTimeS << '\n';
+    std::cout << "dataset write time: " << datasetTimeS << '\n';
+    std::cout << "flush (close) time: " << flushTimeS << '\n';
     
     std::string outName = configFileName + std::string{"-out.csv"};
     std::ofstream outFile{outName};
@@ -205,7 +224,9 @@ int main(int argc, char** argv) {
 
     outFile << "name, value\n";
     outFile << "write, " << writeTimeS << '\n';
-
+    outFile << "meta write, " << metaTimeS << '\n';
+    outFile << "dataset write, " << datasetTimeS << '\n';
+    outFile << "flush, " << flushTimeS << '\n';
     return 0;
 }
 

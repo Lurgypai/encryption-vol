@@ -13,4 +13,8 @@ mkdir out
 cd out
 
 cmake .. \
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=On \
+    -DCMAKE_BUILD_TYPE=Debug \
     -DENC_WRAPPER_ENABLE_NETTLE=Off
+
+mv compile_commands.json ..

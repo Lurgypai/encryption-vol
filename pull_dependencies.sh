@@ -54,6 +54,7 @@ if [[ -z ${H5DUMP} ]]; then
     mkdir out
     pushd out > /dev/null
     CC=${MPICC} CXX=${MPICXX} cmake .. \
+        -DCMAKE_BUILD_TYPE=Debug \
         -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR}/hdf5-ins
     make -j`nproc` && make install
     popd > /dev/null

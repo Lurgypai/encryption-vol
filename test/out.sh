@@ -13,6 +13,7 @@ mkdir out
 cd out
 
 cmake .. \
+    -DCMAKE_BUILD_TYPE=Debug \
     -DENC_WRAPPER_ENABLE_NETTLE=Off \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=On
 
