@@ -14,7 +14,7 @@ if len(sizes) != len(libs) or len(libs) != len(algs):
 
 # Generate combinations and write config files
 for repeat_count in repeats:
-    filename = f"{repeat_count}.config"
+    filename = f"{repeat_count:03d}.config"
     filepath = os.path.join(output_dir, filename)
     with open(filepath, "w") as f:
         for i in range(len(sizes)):
