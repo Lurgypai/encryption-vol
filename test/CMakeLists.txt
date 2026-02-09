@@ -9,5 +9,9 @@ find_package(HDF5 REQUIRED)
 add_executable(test-vol-encrypt-write test-write.c)
 add_executable(test-vol-encrypt-read test-read.c)
 
+add_executable(benchmark benchmark.cpp)
+
 target_link_libraries(test-vol-encrypt-write HDF5::HDF5 enc_wrapper)
 target_link_libraries(test-vol-encrypt-read HDF5::HDF5 enc_wrapper)
+
+target_link_libraries(benchmark HDF5::HDF5 enc_wrapper)

@@ -13,8 +13,4 @@ mkdir out
 cd out
 
 cmake .. \
-    -DENC_WRAPPER_ENABLE_NETTLE=Off \
-    -DCMAKE_EXPORT_COMPILE_COMMANDS=On
-
-mv compile_commands.json ..
-
+    -DENC_WRAPPER_ENABLE_NETTLE=Off
