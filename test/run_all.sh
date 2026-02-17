@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for file in config/*; do
+for file in configs/*; do
     echo "Running ${file}."
     ./run_benchmark.sh ${file}
 done
