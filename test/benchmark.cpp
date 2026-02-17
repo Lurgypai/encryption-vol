@@ -61,6 +61,7 @@ int main(int argc, char** argv) {
     }
 
     /* =========================== PARSE CONFIG ========================== */
+    std::cout << "Parsing config \"" << configFileName << "\"\n";
     std::vector<Dataset> datasetTemplates;
     Dataset* curDataset = nullptr;
     std::string line;
@@ -175,6 +176,7 @@ int main(int argc, char** argv) {
 
 
     /* =========================== PERFORM IO ========================== */
+    std::cout << "Performing IO\n";
     Timer writeTimer;
     Timer datasetTimer;
     double datasetTime{0};
@@ -191,6 +193,9 @@ int main(int argc, char** argv) {
 
         // allocate a buffers
         plaintextBuffer.resize(ioSize);
+        for(auto& c : plaintextBuffer) {
+            c = 'a' + (i % 26);
+        }
 
         /* --------------- IO --------------- */
         datasetTimer.reset();
