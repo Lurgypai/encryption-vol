@@ -192,9 +192,12 @@ int main(int argc, char** argv) {
         const std::size_t ioSize = ioCount * SHARED_BLOCK_SIZE;
 
         // allocate a buffers
-        plaintextBuffer.resize(ioSize);
-        for(auto& c : plaintextBuffer) {
-            c = 'a' + (i % 26);
+        if(plaintextBuffer.size() < ioSize) {
+            auto prevEnd = plaintextBuffer.size();
+            plaintextBuffer.resize(ioSize);
+            for(size_t j = prevEnd; j != plaintextBuffer.size(); ++j) {
+                plaintextBuffer[j] = 'a' + (i % 26);
+            }
         }
 
         /* --------------- IO --------------- */
