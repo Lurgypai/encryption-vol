@@ -17,8 +17,9 @@
 
 /* This connector's header */
 #include "encrypt_vol_connector.h"
-#include "encryption_wrapper/enc_wrapper.h"
-#include "encryption_wrapper/gcrypt_impl/enc_gcrypt.h"
+#include "enc_gcrypt.h"
+#include "enc_wrapper.h"
+#include "enc_store.h"
 
 #include <hdf5.h>
 #include <stdlib.h>
@@ -207,90 +208,46 @@ static H5VLencrypt_obj_type_t get_type(void* obj) {
     return ((H5VLencrypt_obj_t*)obj)->type;
 }
 
-// dataset metadata stored in file
-typedef struct file_dataset_spec_t {
-    char * name;
-    // where in the file to read from
-    size_t read_offset;
-    size_t size;
-    int alg;
-    struct file_dataset_spec_t* next;
-} file_dataset_spec_t;
-
-// allocate new dataset spec, takes ownership of name
-file_dataset_spec_t* make_dataset_spec(char* name, size_t read_offset, size_t size, int alg) {
-    file_dataset_spec_t* spec = malloc(sizeof(file_dataset_spec_t));
-    spec->name = name;
-    spec->read_offset = read_offset;
-    spec->size = size;
-    spec->alg = alg;
-    spec->next = NULL;
-    return spec;
-}
-
-void free_dataset_spec(file_dataset_spec_t* spec) {
-    size_t str_len = strlen(spec->name) + 1;
-    free(spec->name);
-    free(spec);
-}
-
 // file object
 typedef struct H5VLencrypt_file_t {
     H5VLencrypt_obj_type_t type;
-    int file;
-    size_t write_pos;
-    size_t dataset_count;
-    file_dataset_spec_t* datasets;
-    file_dataset_spec_t* datasets_tail;
+    enc_store store;
 } H5VLencrypt_file_t;
 
 // create a file object that uses file as its posix handle
-static H5VLencrypt_file_t* make_file(int file_) {
+static H5VLencrypt_file_t* make_file() {
     H5VLencrypt_file_t* file_obj = malloc(sizeof(H5VLencrypt_file_t));
     file_obj->type = file;
-    file_obj->file = file_;
-    file_obj->write_pos = 0;
-    file_obj->dataset_count = 0;
-    file_obj->datasets = NULL;
-    file_obj->datasets_tail = NULL;
     return file_obj;
 }
 
 // close file object
 static void free_file(H5VLencrypt_file_t* file) {
-    file_dataset_spec_t* cur_dataset = file->datasets;
-    while(cur_dataset != NULL) {
-        file_dataset_spec_t* next = cur_dataset->next;
-        free_dataset_spec(cur_dataset);
-        cur_dataset = next;
-    }
     free(file);
 }
 
 // dataset object
 typedef struct H5VLencrypt_dataset_t {
     H5VLencrypt_obj_type_t type;
-    H5VLencrypt_file_t* file;
-    // where in the file this dataset is read from
-    size_t read_offset;
-    // TODO this probably will need to involve a malloc and a copy but for now pretend its fine
-    const char* name;
-    hid_t space_id;
-    int alg;
-    char* key;
-    size_t key_size;
+    enc_object* obj;
 } H5VLencrypt_dataset_t;
 
-static H5VLencrypt_dataset_t* make_dataset(H5VLencrypt_file_t* file_, size_t read_offset_, const char* name, hid_t space_id_, int alg, char* key_, size_t key_size) {
+static H5VLencrypt_dataset_t* make_dataset(H5VLencrypt_file_t* file, const char* name, hid_t dcpl, hid_t dapl) {
+    struct encrypt_vol_property encrypt_props;
+    H5Pget(dcpl, ENCRYPT_VOL_PROPERTY_NAME, &encrypt_props);
+    struct encrypt_vol_key_property encrypt_key_props;
+    H5Pget(dapl, ENCRYPT_VOL_KEY_PROPERTY_NAME, &encrypt_key_props);
+
+    enc_config cfg;
+    // TODO add nettle support
+    cfg.lib = enc_lib_gcrypt;
+    if(encrypt_props.alg == 0) cfg.alg = aes256;
+    else if (encrypt_props.alg == 1) cfg.alg = chacha20;
+
     H5VLencrypt_dataset_t* dset = malloc(sizeof(H5VLencrypt_dataset_t));
     dset->type = dataset;
-    dset->file = file_;
-    dset->read_offset = read_offset_;
-    dset->name = name;
-    dset->space_id = space_id_;
-    dset->alg = alg;
-    dset->key = key_;
-    dset->key_size = key_size;
+    enc_store_add_object(&file->store, name, enc_object_layout_joined);
+    dset->obj = ;
     return dset;
 }
 
@@ -300,79 +257,27 @@ static void free_dataset(H5VLencrypt_dataset_t* dataset) {
 
 
 static void *file_create(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id, hid_t dxpl_id, void **req) {
-    // printf("Creating file named %s\n", name);
-    // TODO handle flags correctly
-    int file = open(name, O_RDWR | O_CREAT, 0644);
-    H5VLencrypt_file_t* obj = make_file(file);
+    H5VLencrypt_file_t* obj = make_file();
+
+    // TODO add config to fcpl
+    enc_config cfg;
+    obj->store = enc_store_create(name, cfg);
     return obj;
 }
 
 static void *file_open(const char *name, unsigned flags, hid_t fapl_id, hid_t dxpl_id, void **req) {
-    // printf("Opening file named %s\n", name);
-    // TODO handle flags correctly
-    int file = open(name, O_RDWR, 0644);
-    H5VLencrypt_file_t* file_obj = make_file(file);
-    lseek(file, -sizeof(size_t), SEEK_END);
-    read(file, &file_obj->dataset_count, sizeof(file_obj->dataset_count));
-    // printf("Reading metadata for %lu datasets\n", file_obj->dataset_count);
-
-    off_t cur_pos = sizeof(size_t);
-    for(int dataset_num = 0; dataset_num != file_obj->dataset_count; ++dataset_num) { // read name // get size
-        cur_pos += sizeof(size_t);
-        size_t name_size;
-        lseek(file, -cur_pos, SEEK_END);
-        read(file, &name_size, sizeof(size_t));
-        // read name
-        char* name = malloc(name_size + 1);
-        name[name_size] = '\0';
-        cur_pos += name_size;
-        lseek(file, -cur_pos, SEEK_END);
-        read(file, name, name_size);
-        // read offset
-        size_t read_offset;
-        cur_pos += sizeof(size_t);
-        lseek(file, -cur_pos, SEEK_END);
-        read(file, &read_offset, sizeof(size_t));
-
-        size_t size;
-        cur_pos += sizeof(size_t);
-        lseek(file, -cur_pos, SEEK_END);
-        read(file, &size, sizeof(size_t));
-
-        int alg;
-        cur_pos += sizeof(int);
-        lseek(file, -cur_pos, SEEK_END);
-        read(file, &alg, sizeof(int));
-
-        // add metadata
-        file_dataset_spec_t* meta = make_dataset_spec(name, read_offset, size, alg);
-        if(file_obj->datasets == NULL) file_obj->datasets = meta;
-        else file_obj->datasets_tail->next = meta;
-        file_obj->datasets_tail = meta;
-        // printf("Obtained metadata for dataset:\n\tname: %s\n\tread_offset %lu\n", meta->name, meta->read_offset);
-    }
+    H5VLencrypt_file_t* file_obj = make_file();
+    // TODO add key to fapl
+    char* key = NULL;
+    file_obj->store = enc_store_open(name, key);
     return file_obj;
 }
 
 static herr_t file_close(void *file, hid_t dxpl_id, void **req) {
     H5VLencrypt_file_t* obj = (H5VLencrypt_file_t*)file;
-    // printf("Closing file\n");
-    // TODO consider seeking to the end
-    file_dataset_spec_t* cur_dataset = obj->datasets;
-    while(cur_dataset != NULL) {
-        write(obj->file, &cur_dataset->alg, sizeof(cur_dataset->alg));
-        write(obj->file, &cur_dataset->size, sizeof(cur_dataset->size));
-        write(obj->file, &cur_dataset->read_offset, sizeof(cur_dataset->read_offset));
-        size_t name_size = strlen(cur_dataset->name);
-        write(obj->file, cur_dataset->name, name_size);
-        write(obj->file, &name_size, sizeof(name_size));
-        // printf("Storing metadata for dataset:\n\tname: %s\n\tread_offset: %lu\n\tsize: %lu\n", cur_dataset->name, cur_dataset->read_offset, cur_dataset->size);
-        cur_dataset = cur_dataset->next;
-    }
-    write(obj->file, &obj->dataset_count, sizeof(obj->dataset_count));
-    // printf("Wrote metadata for %lu datasets\n", obj->dataset_count);
-
-    close(obj->file);
+    // TODO how do we get the key here
+    char* key = NULL;
+    enc_store_close(obj->store, key);
     free_file(obj);
     return 0;
 }
@@ -382,13 +287,7 @@ static void *dataset_create(void *obj, const H5VL_loc_params_t *loc_params, cons
     // TODO handle any other acces method well at all
     H5VLencrypt_obj_type_t type = get_type(obj);
     if(type == file) {
-        struct encrypt_vol_property encrypt_props;
-        H5Pget(dcpl_id, ENCRYPT_VOL_PROPERTY_NAME, &encrypt_props);
-        struct encrypt_vol_key_property encrypt_key_props;
-        H5Pget(dapl_id, ENCRYPT_VOL_KEY_PROPERTY_NAME, &encrypt_key_props);
-        H5VLencrypt_dataset_t* dset = make_dataset(obj, 0, name, space_id,
-                encrypt_props.alg,
-                encrypt_key_props.key, encrypt_key_props.key_size);
+        H5VLencrypt_dataset_t* dset = make_dataset((H5VLencrypt_file_t*)obj, dcpl_id, dapl_id);
         return dset;
     }
     else {
@@ -530,3 +429,7 @@ static herr_t dataset_close(void *dset, hid_t dxpl_id, void **req) {
 static herr_t opt_query(void *obj, H5VL_subclass_t subcls, int opt_type, uint64_t *flags) {
     return 0;
 }
+
+// questions to answer
+//  how do we get the key to the close function?
+//  how do we get region info to a dataset?
