@@ -14,7 +14,8 @@ cd out
 
 cmake .. \
     -DCMAKE_BUILD_TYPE=Debug \
-    -DENC_WRAPPER_ENABLE_NETTLE=Off \
+    -Denc_wrapper_DIR=${INS_DIR}/enc_wrapper-ins/cmake \
+    -Denc_io_DIR=${INS_DIR}/enc_io-ins/cmake \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=On
 
 mv compile_commands.json ..
