@@ -8,12 +8,11 @@
 #define FILE_NAME "example.h5"
 #define DATASET_COUNT 3
 #define DATASET1_NAME "dataset1"
-#define DIM0 16
+#define DIM0 32
 
 int main() {
     hid_t file_id, dataset_id;
     herr_t status;
-    hsize_t dims[1] = {DIM0};
     int data[DIM0];
 
     // key for accessing
@@ -46,7 +45,7 @@ int main() {
                      H5P_DEFAULT, data);
 
     printf("%s: ", DATASET1_NAME);
-    for (int j = 0; j < dims[0]; j++) {
+    for (int j = 0; j < DIM0; j++) {
         printf("%d ", data[j]);
     }
     printf("\n");

@@ -7,7 +7,7 @@
 
 #define FILE_NAME "example.h5"
 #define DATASET1_NAME "dataset1"
-#define DIM0 16
+#define DIM0 32
 
 int main() {
     hid_t file_id, dataset_id, dataspace_id;
@@ -15,8 +15,8 @@ int main() {
     herr_t status;
 
     // Sample data for datasets
-    int data1[DIM0] = {0, 1, 2, 3, 4, 5, 6, 7, 
-                        8, 9, 10, 11, 12, 13, 14,};
+    int data1[DIM0] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+                        16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31};
 
     enc_config meta_config = {
         .alg = aes256,
@@ -34,10 +34,10 @@ int main() {
     enc_grain_meta grains[2] = {};
     grains[0].cfg.alg = aes256;
     grains[0].cfg.lib = enc_lib_gcrypt;
-    grains[0].size = 8;
+    grains[0].size = (DIM0/2) * sizeof(int);
     grains[1].cfg.alg = chacha20;
     grains[1].cfg.lib = enc_lib_gcrypt;
-    grains[0].size = 8;
+    grains[1].size = (DIM0/2) * sizeof(int);
     hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
     H5Pset_encrypt_vol_dcpl(dcpl, grains, 2);
 
