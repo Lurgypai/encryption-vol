@@ -297,6 +297,10 @@ static H5VLencrypt_file_t* make_file(const char* name, hid_t fcpl, hid_t fapl) {
 
 // close file object
 static void free_file(H5VLencrypt_file_t* file) {
+    // TODO consider moving this
+    for(int obj_idx = 0; obj_idx != file->store.obj_cnt; ++obj_idx) {
+        enc_store_grains_write(file->store, file->store.objs[obj_idx].obj.tag, file->key);
+    }
     enc_store_close(file->store, file->key);
     free(file->key);
     free(file);
@@ -484,8 +488,6 @@ static herr_t dataset_write(size_t count, void *dset[],
         get_offset_size(obj, type_id, mem_sid, file_sid, &offset, &size);
         H5VLencrypt_file_t* file_obj = dataset->file;
         enc_store_write(file_obj->store, dataset->name, offset, size, buf[dset_idex], file_obj->key);
-
-        enc_store_grains_write(file_obj->store, dataset->name, file_obj->key);
     }
     return 0;
 }
