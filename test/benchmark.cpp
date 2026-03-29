@@ -60,8 +60,6 @@ int main(int argc, char** argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &rank_count);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
-    std::cout << "I am rank " << my_rank << " of " << rank_count << '\n';
-
     if(argc != 3) {
         if(my_rank == 0) {
             std::cout << "Incorrect usage.\n";
@@ -93,7 +91,7 @@ int main(int argc, char** argv) {
     }
 
     /* =========================== PARSE CONFIG ========================== */
-    std::cout << "Parsing config \"" << configFileName << "\"\n";
+    if(my_rank == 0) std::cout << "Parsing config \"" << configFileName << "\"" << std::endl;
     std::vector<Dataset> datasetTemplates;
     Dataset* curDataset = nullptr;
     Region* curRegion = nullptr;
@@ -246,7 +244,7 @@ int main(int argc, char** argv) {
 
     /* =========================== PERFORM IO ========================== */
     MPI_Barrier(MPI_COMM_WORLD);
-    if(my_rank == 0) std::cout << "Performing IO\n";
+    if(my_rank == 0) std::cout << "Performing IO" << std::endl;
 
     std::vector<char> plaintextBuffer;
     for(const auto& dsetTemplate : datasetTemplates) {
@@ -322,7 +320,7 @@ int main(int argc, char** argv) {
 
     std::cout << "meta " << ioStr << " time: " << metaTimeS << '\n';
     std::cout << "dataset " << ioStr << " time: " << datasetTimeS << '\n';
-    std::cout << "flush (close) time: " << flushTimeS << '\n';
+    std::cout << "flush (close) time: " << flushTimeS << std::endl;
     
     std::string outName = configFileName + std::string{"-out.csv"};
     outName = std::filesystem::path(outName).filename().string();
@@ -338,8 +336,6 @@ int main(int argc, char** argv) {
     outFile << "meta " << ioStr << ", " << metaTimeS << '\n';
     outFile << "dataset " << ioStr << ", " << datasetTimeS << '\n';
     outFile << "flush, " << flushTimeS << '\n';
-
-    MPI_Finalize();
     return 0;
 }
 

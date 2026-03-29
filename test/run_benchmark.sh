@@ -9,7 +9,7 @@ if [[ ! -f ${1} ]]; then
 fi
 
 # gdb --args out/benchmark ${1} write
-mpiexec -n 4 out/benchmark ${1} write
+srun out/benchmark ${1} write
 # mpiexec -n 2 out/benchmark ${1} read
 
 rm -r output.h5
