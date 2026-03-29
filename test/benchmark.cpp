@@ -15,6 +15,9 @@ extern "C" {
 #include "../vol-encrypt/encrypt_vol_connector.h"
 };
 
+// mutliplied by input size
+constexpr size_t UNIT_SIZE{1024};
+
 class Timer {
 public:
     void reset() {
@@ -28,9 +31,6 @@ public:
 private:
     std::chrono::time_point<std::chrono::high_resolution_clock> start;
 };
-
-// size of elements in the opaque type, the count in the configuration is in terms of these blocks
-constexpr std::size_t SHARED_BLOCK_SIZE = 16;
 
 struct Region {
     std::int64_t size;
@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
             std::string back = line.substr(splitPos + 1);
             if(front == "size") {
                 try {
-                    curRegion->size = std::stoull(back);
+                    curRegion->size = std::stoull(back) * UNIT_SIZE;
                     curDataset->size += curRegion->size;
                 } catch (std::invalid_argument e) {
                     if(my_rank == 0) std::cerr << "ERROR: Unable to parse count, value \"" << back << "\"\n";
@@ -246,9 +246,12 @@ int main(int argc, char** argv) {
     MPI_Barrier(MPI_COMM_WORLD);
     if(my_rank == 0) std::cout << "Performing IO" << std::endl;
 
+    // allocate space for largest region
     std::vector<char> plaintextBuffer;
     for(const auto& dsetTemplate : datasetTemplates) {
-        if(dsetTemplate.size > plaintextBuffer.size()) plaintextBuffer.resize(dsetTemplate.size);
+        for(const auto& region : dsetTemplate.regions) {
+            if(region.size > plaintextBuffer.size()) plaintextBuffer.resize(region.size);
+        }
     }
     if(doWrite) {
         for(int i = 0; i != plaintextBuffer.size(); ++i) {
@@ -270,7 +273,7 @@ int main(int argc, char** argv) {
             const auto& region = datasetTemplate.regions[region_idx];
             int cur_rank = region_idx % rank_count;
 
-            if(my_rank != cur_rank) {
+            if(my_rank == cur_rank) {
                 hid_t dataset_space = H5Dget_space(dsetId);
 
                 hsize_t source_space_size[1] = {static_cast<hsize_t>(region.size)};
@@ -284,6 +287,8 @@ int main(int argc, char** argv) {
                         NULL,
                         source_space_size,
                         NULL );
+
+                std::cout << "Rank " << my_rank << " performing io to region " << region_idx << ", offset: " << write_pos << ", size: " << region.size << std::endl;
 
                 datasetTimer.reset();
                 if(doWrite) H5Dwrite(dsetId, H5T_NATIVE_CHAR, source_space, dataset_space, H5P_DEFAULT, plaintextBuffer.data());
@@ -310,6 +315,7 @@ int main(int argc, char** argv) {
     H5Fclose(fileId);
     double flushTime = flushTimer.getElapsed();
     /* =========================== END PERFORM IO ========================== */
+    MPI_Barrier(MPI_COMM_WORLD);
     if(my_rank != 0) return 0;
 
     double metaTimeS = metaTime / (1000.0 * 1000.0 * 1000.0);

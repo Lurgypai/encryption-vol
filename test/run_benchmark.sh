@@ -8,8 +8,19 @@ if [[ ! -f ${1} ]]; then
     exit 1
 fi
 
-# gdb --args out/benchmark ${1} write
-srun out/benchmark ${1} write
-# mpiexec -n 2 out/benchmark ${1} read
+if [[ ! ${2} == "write" || ! ${2} == "read" ]]; then
+    echo "Invalid direction"
+    echo "Usage: run_benchmarks.sh <config> <write/read>"
+    exit 1
+fi
+
+EXEC=$(which srun)
+if [[ -z $EXEC ]]; then
+    EXEC="mpirun -n 1"
+fi
+
+
+# gdb --args out/benchmark ${1} ${2}
+${EXEC} out/benchmark ${1} ${2}
 
 rm -r output.h5
