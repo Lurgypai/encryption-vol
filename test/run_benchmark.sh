@@ -8,7 +8,7 @@ if [[ ! -f ${1} ]]; then
     exit 1
 fi
 
-if [[ ! ${2} == "write" || ! ${2} == "read" ]]; then
+if [[ ! ${2} == "write" && ! ${2} == "read" ]]; then
     echo "Invalid direction"
     echo "Usage: run_benchmarks.sh <config> <write/read>"
     exit 1
@@ -21,6 +21,7 @@ fi
 
 
 # gdb --args out/benchmark ${1} ${2}
+# valgrind --leak-check=full out/benchmark ${1} ${2}
 ${EXEC} out/benchmark ${1} ${2}
 
 rm -r output.h5
