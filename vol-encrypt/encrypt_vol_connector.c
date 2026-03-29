@@ -42,6 +42,8 @@ static herr_t dataset_read(size_t count, void *dset[],
 static herr_t dataset_write(size_t count, void *dset[],
         hid_t mem_type_id[], hid_t mem_space_id[], hid_t file_space_id[],
         hid_t plist_id, const void *buf[], void **req);
+static herr_t dataset_get(void* dset, H5VL_dataset_get_args_t *args,
+        hid_t dxpl_id, void** req);
 static herr_t dataset_close(void *dset, hid_t dxpl_id, void **req);
 
 static herr_t opt_query(void *obj, H5VL_subclass_t subcls, int opt_type, uint64_t *flags);
@@ -86,7 +88,7 @@ static const H5VL_class_t encrypt_class_g = {
         dataset_open,                                       /* open         */
         dataset_read,                                       /* read         */
         dataset_write,                                       /* write        */
-        NULL,                                       /* get          */
+        dataset_get,                                       /* get          */
         NULL,                                       /* specific     */
         NULL,                                       /* optional     */
         dataset_close                                        /* close        */
@@ -304,14 +306,16 @@ static void free_file(H5VLencrypt_file_t* file) {
 typedef struct H5VLencrypt_dataset_t {
     H5VLencrypt_obj_type_t type;
     char* name;
+    hid_t space;
     H5VLencrypt_file_t* file;
 } H5VLencrypt_dataset_t;
 
-static H5VLencrypt_dataset_t* make_dataset(H5VLencrypt_file_t* file, const char* name, hid_t dcpl) {
+static H5VLencrypt_dataset_t* make_dataset(H5VLencrypt_file_t* file, const char* name, hid_t space, hid_t dcpl) {
     H5VLencrypt_dataset_t* dset = malloc(sizeof(H5VLencrypt_dataset_t));
     dset->type = dataset;
     enc_store_add_object(&file->store, name, enc_object_layout_joined);
     dset->name = strdup(name);
+    dset->space = H5Scopy(space);
     dset->file = file;
 
     enc_grain_meta* grains;
@@ -328,6 +332,7 @@ static H5VLencrypt_dataset_t* make_dataset(H5VLencrypt_file_t* file, const char*
 }
 
 static void free_dataset(H5VLencrypt_dataset_t* dataset) {
+    H5Sclose(dataset->space);
     free(dataset->name);
     free(dataset);
 }
@@ -365,7 +370,7 @@ static void *dataset_create(void *obj, const H5VL_loc_params_t *loc_params, cons
     // TODO handle any other acces method well at all
     H5VLencrypt_obj_type_t type = get_type(obj);
     if(type == file) {
-        H5VLencrypt_dataset_t* dset = make_dataset((H5VLencrypt_file_t*)obj, name, dcpl_id);
+        H5VLencrypt_dataset_t* dset = make_dataset((H5VLencrypt_file_t*)obj, name, space_id, dcpl_id);
         return dset;
     }
     else {
@@ -389,6 +394,15 @@ static void *dataset_open(void *obj, const H5VL_loc_params_t *loc_params, const 
         dset->file = file_obj;
 
         enc_store_grains_read(file_obj->store, name, file_obj->key);
+
+        size_t size = 0;
+        enc_object* obj = enc_store_get_object(file_obj->store, name);
+        for(int grain_idx = 0; grain_idx != obj->grain_cnt; ++grain_idx) {
+            size += obj->grains[grain_idx].size;
+        }
+        hsize_t dim[1] = {size};
+        dset->space = H5Screate_simple(1, dim, NULL);
+
         return dset;
     }
     else {
@@ -480,6 +494,23 @@ static herr_t dataset_close(void *dset, hid_t dxpl_id, void **req) {
     H5VLencrypt_dataset_t* dataset = dset;
     // printf("Closing dataset %s\n", dataset->name);
     free_dataset(dataset);
+    return 0;
+}
+
+static herr_t dataset_get(void* dset, H5VL_dataset_get_args_t *args,
+        hid_t dxpl_id, void** req) {
+    H5VLencrypt_dataset_t* dataset = dset;
+    switch(args->op_type) {
+        case H5VL_DATASET_GET_SPACE:
+            {
+                args->args.get_space.space_id = H5Scopy(dataset->space);
+            }
+            break;
+        default:
+            fprintf(stderr, "ERROR: Dataset get function feature not implemented\n");
+            return 1;
+            break;
+    }
     return 0;
 }
 
