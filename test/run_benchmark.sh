@@ -8,7 +8,8 @@ if [[ ! -f ${1} ]]; then
     exit 1
 fi
 
-# gdb --args out/benchmark ${1}
-out/benchmark ${1}
+# gdb --args out/benchmark ${1} write
+mpiexec -n 4 out/benchmark ${1} write
+# mpiexec -n 2 out/benchmark ${1} read
 
-rm output.h5
+rm -r output.h5

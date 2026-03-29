@@ -303,7 +303,7 @@ static void free_file(H5VLencrypt_file_t* file) {
 // dataset object
 typedef struct H5VLencrypt_dataset_t {
     H5VLencrypt_obj_type_t type;
-    enc_object* obj;
+    char* name;
     H5VLencrypt_file_t* file;
 } H5VLencrypt_dataset_t;
 
@@ -311,7 +311,7 @@ static H5VLencrypt_dataset_t* make_dataset(H5VLencrypt_file_t* file, const char*
     H5VLencrypt_dataset_t* dset = malloc(sizeof(H5VLencrypt_dataset_t));
     dset->type = dataset;
     enc_store_add_object(&file->store, name, enc_object_layout_joined);
-    dset->obj = enc_store_get_object(file->store, name);
+    dset->name = strdup(name);
     dset->file = file;
 
     enc_grain_meta* grains;
@@ -319,14 +319,16 @@ static H5VLencrypt_dataset_t* make_dataset(H5VLencrypt_file_t* file, const char*
     H5Pget_encrypt_vol_dcpl(dcpl, &grains, &grain_cnt);
 
     // add regions from dcpl
+    enc_object* obj = enc_store_get_object(file->store, name);
     for(int grain_idx = 0; grain_idx != grain_cnt; ++ grain_idx) {
-        enc_object_add_grain(dset->obj, grains[grain_idx]);
+        enc_object_add_grain(obj, grains[grain_idx]);
     }
 
     return dset;
 }
 
 static void free_dataset(H5VLencrypt_dataset_t* dataset) {
+    free(dataset->name);
     free(dataset);
 }
 
@@ -383,7 +385,7 @@ static void *dataset_open(void *obj, const H5VL_loc_params_t *loc_params, const 
         // read the object region data
         H5VLencrypt_dataset_t* dset = malloc(sizeof(H5VLencrypt_dataset_t));
         dset->type = dataset;
-        dset->obj = enc_store_get_object(file_obj->store, name);
+        dset->name = strdup(name);
         dset->file = file_obj;
 
         enc_store_grains_read(file_obj->store, name, file_obj->key);
@@ -446,9 +448,10 @@ static herr_t dataset_read(size_t count, void *dset[],
         size_t size = 0, offset = 0; 
 
         H5VLencrypt_dataset_t* dataset = (H5VLencrypt_dataset_t*)dset[dset_idex];
-        get_offset_size(dataset->obj, type_id, mem_sid, file_sid, &offset, &size);
+        enc_object* obj = enc_store_get_object(dataset->file->store, dataset->name);
+        get_offset_size(obj, type_id, mem_sid, file_sid, &offset, &size);
         H5VLencrypt_file_t* file_obj = dataset->file;
-        enc_store_read(file_obj->store, dataset->obj->tag, offset, size, buf[dset_idex], file_obj->key);
+        enc_store_read(file_obj->store, dataset->name, offset, size, buf[dset_idex], file_obj->key);
     }
     return 0;
 }
@@ -463,11 +466,12 @@ static herr_t dataset_write(size_t count, void *dset[],
         size_t size = 0, offset = 0; 
 
         H5VLencrypt_dataset_t* dataset = (H5VLencrypt_dataset_t*)dset[dset_idex];
-        get_offset_size(dataset->obj, type_id, mem_sid, file_sid, &offset, &size);
+        enc_object* obj = enc_store_get_object(dataset->file->store, dataset->name);
+        get_offset_size(obj, type_id, mem_sid, file_sid, &offset, &size);
         H5VLencrypt_file_t* file_obj = dataset->file;
-        enc_store_write(file_obj->store, dataset->obj->tag, offset, size, buf[dset_idex], file_obj->key);
+        enc_store_write(file_obj->store, dataset->name, offset, size, buf[dset_idex], file_obj->key);
 
-        enc_store_grains_write(file_obj->store, dataset->obj->tag, file_obj->key);
+        enc_store_grains_write(file_obj->store, dataset->name, file_obj->key);
     }
     return 0;
 }
