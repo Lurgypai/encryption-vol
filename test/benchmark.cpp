@@ -288,7 +288,7 @@ int main(int argc, char** argv) {
                         source_space_size,
                         NULL );
 
-                std::cout << "Rank " << my_rank << " performing io to region " << region_idx << ", offset: " << write_pos << ", size: " << region.size << std::endl;
+                // std::cout << "Rank " << my_rank << " performing io to region " << region_idx << ", offset: " << write_pos << ", size: " << region.size << std::endl;
 
                 datasetTimer.reset();
                 if(doWrite) H5Dwrite(dsetId, H5T_NATIVE_CHAR, source_space, dataset_space, H5P_DEFAULT, plaintextBuffer.data());
@@ -312,36 +312,38 @@ int main(int argc, char** argv) {
     }
     Timer flushTimer;
     flushTimer.reset();
-    H5Fclose(fileId);
+    // hacky
+    if(my_rank == 0) H5Fclose(fileId);
     double flushTime = flushTimer.getElapsed();
     /* =========================== END PERFORM IO ========================== */
     MPI_Barrier(MPI_COMM_WORLD);
-    if(my_rank != 0) return 0;
+    if(my_rank == 0) {
+        double metaTimeS = metaTime / (1000.0 * 1000.0 * 1000.0);
+        double datasetTimeS = datasetTime / (1000.0 * 1000.0 * 1000.0);
+        double flushTimeS = flushTime / (1000.0 * 1000.0 * 1000.0);
 
-    double metaTimeS = metaTime / (1000.0 * 1000.0 * 1000.0);
-    double datasetTimeS = datasetTime / (1000.0 * 1000.0 * 1000.0);
-    double flushTimeS = flushTime / (1000.0 * 1000.0 * 1000.0);
+        std::string ioStr = doWrite ? "write" : "read";
 
-    std::string ioStr = doWrite ? "write" : "read";
+        std::cout << "meta " << ioStr << " time: " << metaTimeS << '\n';
+        std::cout << "dataset " << ioStr << " time: " << datasetTimeS << '\n';
+        std::cout << "flush (close) time: " << flushTimeS << std::endl;
+        
+        std::string outName = configFileName + std::string{"-out.csv"};
+        outName = std::filesystem::path(outName).filename().string();
 
-    std::cout << "meta " << ioStr << " time: " << metaTimeS << '\n';
-    std::cout << "dataset " << ioStr << " time: " << datasetTimeS << '\n';
-    std::cout << "flush (close) time: " << flushTimeS << std::endl;
-    
-    std::string outName = configFileName + std::string{"-out.csv"};
-    outName = std::filesystem::path(outName).filename().string();
+        std::ofstream outFile{outName};
 
-    std::ofstream outFile{outName};
+        if(!outFile.good()) {
+            std::cerr << "Error, unable to open output file \"out.csv\" for writing.\n";
+            return 1;
+        }
 
-    if(!outFile.good()) {
-        std::cerr << "Error, unable to open output file \"out.csv\" for writing.\n";
-        return 1;
+        outFile << "name, value\n";
+        outFile << "meta " << ioStr << ", " << metaTimeS << '\n';
+        outFile << "dataset " << ioStr << ", " << datasetTimeS << '\n';
+        outFile << "flush, " << flushTimeS << '\n';
     }
-
-    outFile << "name, value\n";
-    outFile << "meta " << ioStr << ", " << metaTimeS << '\n';
-    outFile << "dataset " << ioStr << ", " << datasetTimeS << '\n';
-    outFile << "flush, " << flushTimeS << '\n';
+    MPI_Finalize();
     return 0;
 }
 

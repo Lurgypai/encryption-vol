@@ -1,11 +1,8 @@
 import os
 
-# region_counts = [ 512 ]
-# total dataset sizes
-# sizes = [(32 * 1024 * 1024)]
-
-region_counts = [1, 8, 16, 32]
-sizes = [32]
+region_counts = [ 128 ]
+# total file size
+sizes = [(32 * 1024 * 1024)]
 
 libs = ["gcrypt"]
 algs = ["aes256"]
