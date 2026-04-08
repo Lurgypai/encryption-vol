@@ -1,8 +1,8 @@
 import os
 
-region_counts = [ 128 ]
+region_counts = [ 128, 4096 ]
 # total file size
-sizes = [(32 * 1024 * 1024)]
+sizes = [ 32 * 1024 * 1024, 2 * 1024 * 1024 * 1024]
 
 libs = ["gcrypt"]
 algs = ["aes256"]

@@ -4,6 +4,7 @@
 #include <vector>
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 
 #include <cstring>
 
@@ -32,6 +33,11 @@ private:
     std::chrono::time_point<std::chrono::high_resolution_clock> start;
 };
 
+std::ofstream GetDebugLog(int my_rank) {
+    std::ofstream log{"rank-" + std::to_string(my_rank) + ".log", std::ios::trunc};
+    return log;
+}
+
 struct Region {
     std::int64_t size;
     std::string algorithm;
@@ -55,10 +61,15 @@ static inline bool isValidDataset(const Dataset& dataset) {
 }
 
 int main(int argc, char** argv) {
+    /* =========================== INIT ========================== */
     MPI_Init(&argc, &argv);
     int my_rank, rank_count;
     MPI_Comm_size(MPI_COMM_WORLD, &rank_count);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+
+    std::ofstream log = GetDebugLog(my_rank);
+
+    if(my_rank == 0) std::cout << "Ranks: " << rank_count << std::endl;
 
     if(argc != 3) {
         if(my_rank == 0) {
@@ -89,6 +100,9 @@ int main(int argc, char** argv) {
         if(my_rank == 0) std::cerr << "ERROR: Unable to open file \"" << configFileName << "\"\n";
         return 1;
     }
+
+    /* =========================== END INIT ========================== */
+
 
     /* =========================== PARSE CONFIG ========================== */
     if(my_rank == 0) std::cout << "Parsing config \"" << configFileName << "\"" << std::endl;
@@ -161,10 +175,12 @@ int main(int argc, char** argv) {
         if(my_rank == 0) std::cerr << "ERROR: Last region is invalid\n";
         return 1;
     }
+
     /* =========================== END PARSE CONFIG ========================== */
 
 
     /* =========================== PREP FILE ========================== */
+
     MPI_Barrier(MPI_COMM_WORLD);
     // setup dummy key
     enc_config file_conf = {
@@ -201,7 +217,11 @@ int main(int argc, char** argv) {
 
     std::vector<hid_t> datasetIds;
     datasetIds.resize(datasetTemplates.size());
+
+    log << "Beginning prepare loop" << std::endl;
+
     for(int i = 0; i != datasetTemplates.size(); ++i) {
+        log << "Prepping dataset " << i << std::endl;
         std::string datasetName{"dataset"};
         datasetName += std::to_string(i);
         auto& dsetId = datasetIds[i];
@@ -235,14 +255,19 @@ int main(int argc, char** argv) {
             H5Pset_encrypt_vol_dcpl(dcpl, grains.data(), grains.size());
             dsetId = H5Dcreate2(fileId, datasetName.c_str(), H5T_NATIVE_CHAR, fSpace, H5P_DEFAULT, dcpl, H5P_DEFAULT);
         } else {
+            log << "Opening dataset " << i << std::endl;
             dsetId = H5Dopen(fileId, datasetName.c_str(), H5P_DEFAULT);
         }
     }
     double metaTime = metaTimer.getElapsed();
+
+    log << "Finished prepping datasets" << std::endl;
+
     /* =========================== END PREP DATASETS ========================== */
 
 
     /* =========================== PERFORM IO ========================== */
+    std::cout << "----------> Rank " << my_rank << " arrived at barrier" << std::endl;
     MPI_Barrier(MPI_COMM_WORLD);
     if(my_rank == 0) std::cout << "Performing IO" << std::endl;
 
@@ -253,11 +278,13 @@ int main(int argc, char** argv) {
             if(region.size > plaintextBuffer.size()) plaintextBuffer.resize(region.size);
         }
     }
+    /*
     if(doWrite) {
         for(int i = 0; i != plaintextBuffer.size(); ++i) {
             plaintextBuffer[i] = 'a' + (i % 26);
         }
     }
+    */
 
     Timer datasetTimer;
     double datasetTime{0};
@@ -313,9 +340,11 @@ int main(int argc, char** argv) {
     Timer flushTimer;
     flushTimer.reset();
     // hacky
-    if(my_rank == 0) H5Fclose(fileId);
+    H5Fclose(fileId);
     double flushTime = flushTimer.getElapsed();
+
     /* =========================== END PERFORM IO ========================== */
+
     MPI_Barrier(MPI_COMM_WORLD);
     if(my_rank == 0) {
         double metaTimeS = metaTime / (1000.0 * 1000.0 * 1000.0);
@@ -343,7 +372,9 @@ int main(int argc, char** argv) {
         outFile << "dataset " << ioStr << ", " << datasetTimeS << '\n';
         outFile << "flush, " << flushTimeS << '\n';
     }
+
     MPI_Finalize();
+
     return 0;
 }
 

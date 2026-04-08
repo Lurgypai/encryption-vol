@@ -20,8 +20,6 @@ pushd enc_wrapper > /dev/null
             rm -rf ${OUT_DIR}
 
             cmake .. \
-                -DCMAKE_C_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
-                -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
                 -DCMAKE_EXPORT_COMPILE_COMMANDS=On \
                 -DCMAKE_INSTALL_PREFIX=${OUT_DIR} \
                 -DENC_WRAPPER_ENABLE_NETTLE=Off \
@@ -38,11 +36,9 @@ pushd enc_wrapper > /dev/null
             OUT_DIR=${INSTALL_DIR}/enc_io-ins
             rm -rf ${OUT_DIR}
 
-            echo "WRAPPER_DIR: ${WRAPPER_DIR}"
-
             cmake .. \
-                -DCMAKE_C_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
-                -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
+                -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx \
+                -DCMAKE_C_FLAGS="-DENABLE_MPI" \
                 -Denc_wrapper_DIR=${WRAPPER_DIR}/cmake \
                 -DCMAKE_EXPORT_COMPILE_COMMANDS=On \
                 -DCMAKE_INSTALL_PREFIX=${OUT_DIR} \

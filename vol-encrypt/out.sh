@@ -13,8 +13,6 @@ mkdir out
 cd out
 
 cmake .. \
-    -DCMAKE_C_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
-    -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
     -Denc_wrapper_DIR="${INS_DIR}/enc_wrapper-ins/cmake" \
     -Denc_io_DIR="${INS_DIR}/enc_io-ins/cmake" \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=On \
