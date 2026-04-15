@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &rank_count);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
-    std::ofstream log = GetDebugLog(my_rank);
+    // std::ofstream log = GetDebugLog(my_rank);
 
     if(my_rank == 0) std::cout << "Ranks: " << rank_count << std::endl;
 
@@ -218,10 +218,10 @@ int main(int argc, char** argv) {
     std::vector<hid_t> datasetIds;
     datasetIds.resize(datasetTemplates.size());
 
-    log << "Beginning prepare loop" << std::endl;
+    // log << "Beginning prepare loop" << std::endl;
 
     for(int i = 0; i != datasetTemplates.size(); ++i) {
-        log << "Prepping dataset " << i << std::endl;
+        // log << "Prepping dataset " << i << std::endl;
         std::string datasetName{"dataset"};
         datasetName += std::to_string(i);
         auto& dsetId = datasetIds[i];
@@ -255,19 +255,18 @@ int main(int argc, char** argv) {
             H5Pset_encrypt_vol_dcpl(dcpl, grains.data(), grains.size());
             dsetId = H5Dcreate2(fileId, datasetName.c_str(), H5T_NATIVE_CHAR, fSpace, H5P_DEFAULT, dcpl, H5P_DEFAULT);
         } else {
-            log << "Opening dataset " << i << std::endl;
+            // log << "Opening dataset " << i << std::endl;
             dsetId = H5Dopen(fileId, datasetName.c_str(), H5P_DEFAULT);
         }
     }
     double metaTime = metaTimer.getElapsed();
 
-    log << "Finished prepping datasets" << std::endl;
+    // log << "Finished prepping datasets" << std::endl;
 
     /* =========================== END PREP DATASETS ========================== */
 
 
     /* =========================== PERFORM IO ========================== */
-    std::cout << "----------> Rank " << my_rank << " arrived at barrier" << std::endl;
     MPI_Barrier(MPI_COMM_WORLD);
     if(my_rank == 0) std::cout << "Performing IO" << std::endl;
 

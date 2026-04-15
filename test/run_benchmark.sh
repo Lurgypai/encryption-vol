@@ -14,9 +14,19 @@ if [[ ! ${2} == "write" && ! ${2} == "read" ]]; then
     exit 1
 fi
 
+if [[ -z ${SUB_NODES} ]]; then
+    SUB_NODES=$SLURM_JOB_NUM_NODES
+fi
+
+if [[ -z ${SUB_TASKS_PER_NODE} ]]; then
+    SUB_TASKS_PER_NODE=$SLURM_NTASKS_PER_NODE
+fi
+
 EXEC=$(which srun)
 if [[ -z $EXEC ]]; then
     EXEC="mpirun -n 1"
+else
+    EXEC="srun -N ${SUB_NODES} --ntasks-per-node=${SUB_TASKS_PER_NODE}"
 fi
 
 # gdb --args out/benchmark ${1} ${2}
