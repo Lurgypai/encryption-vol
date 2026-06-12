@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <hdf5.h>
 #include <stdlib.h>
+#include <mpi.h>
 
 #include "../vol-encrypt/encrypt_vol_connector.h"
 #include "enc_wrapper.h"
@@ -10,7 +11,8 @@
 #define DATASET1_NAME "dataset1"
 #define DIM0 32
 
-int main() {
+int main(int argc, char** argv) {
+    MPI_Init(&argc, &argv);
     hid_t file_id, dataset_id;
     herr_t status;
     int data[DIM0];
@@ -52,7 +54,7 @@ int main() {
 
     H5Dclose(dataset_id);
     H5Fclose(file_id);
-
+    MPI_Finalize();
     return 0;
 }
 

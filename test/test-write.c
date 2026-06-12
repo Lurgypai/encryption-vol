@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <hdf5.h>
 #include <stdlib.h>
+#include <mpi.h>
 
 #include "../vol-encrypt/encrypt_vol_connector.h"
 #include "enc_wrapper.h"
@@ -9,7 +10,8 @@
 #define DATASET1_NAME "dataset1"
 #define DIM0 32
 
-int main() {
+int main(int argc, char** argv) {
+    MPI_Init(&argc, &argv);
     hid_t file_id, dataset_id, dataspace_id;
     hsize_t dims[1] = {DIM0};
     herr_t status;
@@ -62,7 +64,7 @@ int main() {
     H5Fclose(file_id);
 
     printf("File %s with 1 dataset containing 2 regions created successfully.\n", FILE_NAME);
-
+    MPI_Finalize();
     return 0;
 }
 

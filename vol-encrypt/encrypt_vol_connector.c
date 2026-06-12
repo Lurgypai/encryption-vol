@@ -297,10 +297,6 @@ static H5VLencrypt_file_t* make_file(const char* name, hid_t fcpl, hid_t fapl) {
 
 // close file object
 static void free_file(H5VLencrypt_file_t* file) {
-    // TODO consider moving this
-    for(int obj_idx = 0; obj_idx != file->store.obj_cnt; ++obj_idx) {
-        enc_store_grains_write(file->store, file->store.objs[obj_idx].obj.tag, file->key);
-    }
     enc_store_close(file->store, file->key);
     free(file->key);
     free(file);
@@ -329,7 +325,7 @@ static H5VLencrypt_dataset_t* make_dataset(H5VLencrypt_file_t* file, const char*
     // add regions from dcpl
     enc_object* obj = enc_store_get_object(file->store, name);
     for(int grain_idx = 0; grain_idx != grain_cnt; ++ grain_idx) {
-        enc_object_add_grain(obj, grains[grain_idx]);
+        enc_store_add_grain(&file->store, name, grains[grain_idx]);
     }
 
     return dset;
@@ -397,13 +393,10 @@ static void *dataset_open(void *obj, const H5VL_loc_params_t *loc_params, const 
         dset->name = strdup(name);
         dset->file = file_obj;
 
-        enc_store_grains_read(file_obj->store, name, file_obj->key);
-
-        size_t size = 0;
+        // TODO this only works because right now we used CHAR as the datatype
+        // need to update with object meta to actually have real dataspaces
         enc_object* obj = enc_store_get_object(file_obj->store, name);
-        for(int grain_idx = 0; grain_idx != obj->grain_cnt; ++grain_idx) {
-            size += obj->grains[grain_idx].size;
-        }
+        size_t size = obj->cur_grain_offset;
         hsize_t dim[1] = {size};
         dset->space = H5Screate_simple(1, dim, NULL);
 
@@ -415,13 +408,11 @@ static void *dataset_open(void *obj, const H5VL_loc_params_t *loc_params, const 
     return NULL;
 }
 
+// calculate the size and offset of a selection
 static void get_offset_size(const enc_object* obj, hid_t type_id, hid_t mem_sid, hid_t file_sid, size_t* offset_out, size_t* size_out) {
     if(mem_sid == H5S_ALL && file_sid == H5S_ALL) {
         *offset_out = 0;
-        *size_out = 0;
-        for(int i = 0; i != obj->grain_cnt; ++i) {
-            *size_out += obj->grains[i].size;
-        }
+        *size_out = obj->cur_grain_offset;
         return;
     }
     // calculate size of selection
@@ -469,6 +460,8 @@ static herr_t dataset_read(size_t count, void *dset[],
         enc_object* obj = enc_store_get_object(dataset->file->store, dataset->name);
         get_offset_size(obj, type_id, mem_sid, file_sid, &offset, &size);
         H5VLencrypt_file_t* file_obj = dataset->file;
+        // move to dataset open?
+        enc_store_index_read(file_obj->store, dataset->name, file_obj->key);
         enc_store_read(file_obj->store, dataset->name, offset, size, buf[dset_idex], file_obj->key);
     }
     return 0;
@@ -487,7 +480,11 @@ static herr_t dataset_write(size_t count, void *dset[],
         enc_object* obj = enc_store_get_object(dataset->file->store, dataset->name);
         get_offset_size(obj, type_id, mem_sid, file_sid, &offset, &size);
         H5VLencrypt_file_t* file_obj = dataset->file;
+        // TODO this grains write is redundant and will slow things, but the grains need to be on disk rn for io
+        enc_store_grains_write(&file_obj->store, dataset->name, file_obj->key);
         enc_store_write(file_obj->store, dataset->name, offset, size, buf[dset_idex], file_obj->key);
+        // move to dataset close?
+        enc_store_index_write(file_obj->store, dataset->name, file_obj->key);
     }
     return 0;
 }

@@ -11,6 +11,7 @@ echo "Pulling and installing encryption wrapper"
 rm -rf enc_wrapper
 git clone https://github.com/Lurgypai/enc_wrapper.git
 pushd enc_wrapper > /dev/null
+    git switch AddIndex
     # wrapper
     pushd wrapper
         mkdir out
