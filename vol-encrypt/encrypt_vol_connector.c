@@ -297,7 +297,7 @@ static H5VLencrypt_file_t* make_file(const char* name, hid_t fcpl, hid_t fapl) {
 
 // close file object
 static void free_file(H5VLencrypt_file_t* file) {
-    enc_store_close(file->store, file->key);
+    enc_store_close(&file->store, file->key);
     free(file->key);
     free(file);
 }
@@ -325,7 +325,7 @@ static H5VLencrypt_dataset_t* make_dataset(H5VLencrypt_file_t* file, const char*
     // add regions from dcpl
     enc_object* obj = enc_store_get_object(file->store, name);
     for(int grain_idx = 0; grain_idx != grain_cnt; ++ grain_idx) {
-        enc_store_add_grain(&file->store, name, grains[grain_idx]);
+        enc_store_add_grain(&file->store, name, grains[grain_idx], file->key);
     }
 
     return dset;
@@ -460,9 +460,9 @@ static herr_t dataset_read(size_t count, void *dset[],
         enc_object* obj = enc_store_get_object(dataset->file->store, dataset->name);
         get_offset_size(obj, type_id, mem_sid, file_sid, &offset, &size);
         H5VLencrypt_file_t* file_obj = dataset->file;
-        // move to dataset open?
-        enc_store_index_read(file_obj->store, dataset->name, file_obj->key);
-        enc_store_read(file_obj->store, dataset->name, offset, size, buf[dset_idex], file_obj->key);
+
+        enc_store_index_read(&file_obj->store, dataset->name, file_obj->key);
+        enc_store_read(&file_obj->store, dataset->name, offset, size, buf[dset_idex], file_obj->key);
     }
     return 0;
 }
@@ -480,11 +480,9 @@ static herr_t dataset_write(size_t count, void *dset[],
         enc_object* obj = enc_store_get_object(dataset->file->store, dataset->name);
         get_offset_size(obj, type_id, mem_sid, file_sid, &offset, &size);
         H5VLencrypt_file_t* file_obj = dataset->file;
-        // TODO this grains write is redundant and will slow things, but the grains need to be on disk rn for io
-        enc_store_grains_write(&file_obj->store, dataset->name, file_obj->key);
-        enc_store_write(file_obj->store, dataset->name, offset, size, buf[dset_idex], file_obj->key);
-        // move to dataset close?
-        enc_store_index_write(file_obj->store, dataset->name, file_obj->key);
+
+        enc_store_write(&file_obj->store, dataset->name, offset, size, buf[dset_idex], file_obj->key);
+        enc_store_index_write(&file_obj->store, dataset->name, file_obj->key);
     }
     return 0;
 }
