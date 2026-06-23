@@ -13,6 +13,7 @@
 
 extern "C" {
 #include "enc_wrapper.h"
+#include "enc_init.h"
 #include "../vol-encrypt/encrypt_vol_connector.h"
 };
 
@@ -63,6 +64,7 @@ static inline bool isValidDataset(const Dataset& dataset) {
 int main(int argc, char** argv) {
     /* =========================== INIT ========================== */
     MPI_Init(&argc, &argv);
+    enc_init();
     int my_rank, rank_count;
     MPI_Comm_size(MPI_COMM_WORLD, &rank_count);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
@@ -70,6 +72,8 @@ int main(int argc, char** argv) {
     // std::ofstream log = GetDebugLog(my_rank);
 
     if(my_rank == 0) std::cout << "Ranks: " << rank_count << std::endl;
+    std::cout << "ENC_RANK_G: " << ENC_RANK_G << std::endl;
+
 
     if(argc != 3) {
         if(my_rank == 0) {

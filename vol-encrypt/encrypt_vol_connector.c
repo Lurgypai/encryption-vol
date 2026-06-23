@@ -353,6 +353,9 @@ static void *file_open(const char *name, unsigned flags, hid_t fapl_id, hid_t dx
 
     file_obj->type = file;
     file_obj->store = enc_store_open(name, key);
+
+    printf("opened store with name %s\r\n", file_obj->store.name);
+    
     file_obj->key = malloc(key_size);
     memcpy(file_obj->key, key, key_size);
     return file_obj;
@@ -460,6 +463,8 @@ static herr_t dataset_read(size_t count, void *dset[],
         enc_object* obj = enc_store_get_object(dataset->file->store, dataset->name);
         get_offset_size(obj, type_id, mem_sid, file_sid, &offset, &size);
         H5VLencrypt_file_t* file_obj = dataset->file;
+
+        printf("reading from store with name %s\r\n", file_obj->store.name);
 
         enc_store_index_read(&file_obj->store, dataset->name, file_obj->key);
         enc_store_read(&file_obj->store, dataset->name, offset, size, buf[dset_idex], file_obj->key);

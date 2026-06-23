@@ -32,4 +32,5 @@ fi
 # gdb --args out/benchmark ${1} ${2}
 # valgrind --leak-check=full out/benchmark ${1} ${2}
 echo "Using ${EXEC} as runner"
-${EXEC} out/benchmark ${1} ${2}
+${EXEC} gdb --args out/benchmark ${1} ${2}
+# ${EXEC} out/benchmark ${1} ${2}
