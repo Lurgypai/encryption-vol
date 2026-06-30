@@ -3,5 +3,5 @@ export HDF5_VOL_CONNECTOR="encrypt_vol_connector"
 
 rm example.h5
 
-out/test-vol-encrypt-write
-gdb --args out/test-vol-encrypt-read
+valgrind out/test-vol-encrypt-write
+valgrind out/test-vol-encrypt-read

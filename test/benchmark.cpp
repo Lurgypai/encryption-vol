@@ -74,7 +74,6 @@ int main(int argc, char** argv) {
     if(my_rank == 0) std::cout << "Ranks: " << rank_count << std::endl;
     std::cout << "ENC_RANK_G: " << ENC_RANK_G << std::endl;
 
-
     if(argc != 3) {
         if(my_rank == 0) {
             std::cout << "Incorrect usage.\n";

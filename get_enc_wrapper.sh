@@ -21,7 +21,6 @@ pushd enc_wrapper > /dev/null
             rm -rf ${OUT_DIR}
 
             cmake .. \
-                -DCMAKE_EXPORT_COMPILE_COMMANDS=On \
                 -DCMAKE_INSTALL_PREFIX=${OUT_DIR} \
                 -DENC_WRAPPER_ENABLE_NETTLE=Off \
                 -DCMAKE_BUILD_TYPE=Debug
@@ -38,10 +37,8 @@ pushd enc_wrapper > /dev/null
             rm -rf ${OUT_DIR}
 
             cmake .. \
-                -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx \
-                -DCMAKE_C_FLAGS="-DENABLE_MPI" \
+                -DCMAKE_C_COMPILER=${MPICC} -DCMAKE_CXX_COMPILER=${MPICXX} \
                 -Denc_wrapper_DIR=${WRAPPER_DIR}/cmake \
-                -DCMAKE_EXPORT_COMPILE_COMMANDS=On \
                 -DCMAKE_INSTALL_PREFIX=${OUT_DIR} \
                 -DCMAKE_BUILD_TYPE=Debug
                 make -j`nproc` && make install

@@ -62,6 +62,26 @@ if [[ -z ${H5DUMP} ]]; then
 else
     echo "Found h5dump at \"${H5DUMP}\", skipping install"
 fi
+
+MPICC=$(which mpicc)
+if [[ -z ${MPICC} ]]; then
+    git clone git@github.com:pmodels/mpich.git
+    pushd mpich
+        git submodule update --init
+        ./autogen.sh
+        ./configure --prefix=${INSTALL_DIR}/mpich-ins --with-device=ch4:ofi
+        make -j`nproc` && make install
+        MPICC=${INSTALL_DIR}/mpich-ins/bin/mpicc
+        MPICXX=${INSTALL_DIR}/mpich-ins/bin/mpicxx
+    popd
+else
+    echo "Found mpicc at \"${MPICC}\", skipping install"
+    MPICXX=$(which mpicxx)
+fi
+
+export MPICC=${MPICC}
+export MPICXX=${MPICXX}
+
 popd > /dev/null
 
 ./get_enc_wrapper.sh

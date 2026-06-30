@@ -23,14 +23,15 @@ if [[ -z ${SUB_TASKS_PER_NODE} ]]; then
 fi
 
 EXEC=$(which srun)
-if [[ -z $EXEC ]]; then
-    EXEC="mpirun -n 1"
-else
+if [[ ! -z $EXEC ]]; then
     EXEC="srun -N ${SUB_NODES} --ntasks-per-node=${SUB_TASKS_PER_NODE}"
+    echo "Using ${EXEC} as runner"
+else 
+    echo "Running locally"
 fi
 
 # gdb --args out/benchmark ${1} ${2}
 # valgrind --leak-check=full out/benchmark ${1} ${2}
-echo "Using ${EXEC} as runner"
-${EXEC} gdb --args out/benchmark ${1} ${2}
+${EXEC} gdb -batch -ex "run" -ex "bt" --args out/benchmark ${1} ${2} &> backtrace_${PMI_RANK}
+# ${EXEC} valgrind out/benchmark ${1} ${2}
 # ${EXEC} out/benchmark ${1} ${2}
