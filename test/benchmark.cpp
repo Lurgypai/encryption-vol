@@ -72,7 +72,6 @@ int main(int argc, char** argv) {
     // std::ofstream log = GetDebugLog(my_rank);
 
     if(my_rank == 0) std::cout << "Ranks: " << rank_count << std::endl;
-    std::cout << "ENC_RANK_G: " << ENC_RANK_G << std::endl;
 
     if(argc != 3) {
         if(my_rank == 0) {
@@ -342,6 +341,9 @@ int main(int argc, char** argv) {
     Timer flushTimer;
     flushTimer.reset();
     // hacky
+    for(const auto& dsetId : datasetIds) {
+        H5Dclose(dsetId);
+    }
     H5Fclose(fileId);
     double flushTime = flushTimer.getElapsed();
 

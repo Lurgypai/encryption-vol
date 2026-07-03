@@ -2,5 +2,11 @@
 
 cd out
 make clean
-bear -- make
-mv compile_commands.json ..
+
+BEAR=$(which bear)
+if [[ ! -z $BEAR ]]; then
+    bear -- make
+    mv compile_commands.json ..
+else
+    make
+fi
