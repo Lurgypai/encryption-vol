@@ -279,13 +279,11 @@ int main(int argc, char** argv) {
             if(region.size > plaintextBuffer.size()) plaintextBuffer.resize(region.size);
         }
     }
-    /*
     if(doWrite) {
         for(int i = 0; i != plaintextBuffer.size(); ++i) {
             plaintextBuffer[i] = 'a' + (i % 26);
         }
     }
-    */
 
     Timer datasetTimer;
     double datasetTime{0};
@@ -316,27 +314,40 @@ int main(int argc, char** argv) {
                         source_space_size,
                         NULL );
 
-                // std::cout << "Rank " << my_rank << " performing io to region " << region_idx << ", offset: " << write_pos << ", size: " << region.size << std::endl;
+                std::cout << "Rank " << my_rank << " performing io to region " << region_idx << ", offset: " << write_pos << ", size: " << region.size << std::endl;
+
+                /*
+                if(doWrite) {
+                    for(auto& c : plaintextBuffer) std::cout << c << ", ";
+                }
+                */
 
                 datasetTimer.reset();
                 if(doWrite) H5Dwrite(dsetId, H5T_NATIVE_CHAR, source_space, dataset_space, H5P_DEFAULT, plaintextBuffer.data());
                 else H5Dread(dsetId, H5T_NATIVE_CHAR, source_space, dataset_space, H5P_DEFAULT, plaintextBuffer.data());
                 datasetTime += datasetTimer.getElapsed();
+
+                /*
+                if(!doWrite) {
+                    for(auto& c : plaintextBuffer) std::cout << c << ", ";
+                }
+                */
             }
 
             write_pos += region.size;
         }
 
-        /*
         if(!doWrite) {
             for(int i = 0; i != plaintextBuffer.size(); ++i) {
-                if(plaintextBuffer[i] != 'a' + (i % 26)) {
-                    std::cerr << "ERROR: Failed to validate read (found incorrect character while reading)";
+                char c = 'a' + (i % 26);
+                char c1 = plaintextBuffer[i];
+                if(c1 != c) {
+                    std::cerr << "ERROR: Failed to validate read (found incorrect character while reading)\n";
+                    std::cerr << "\tat " << i << " expected " << c << " (" << static_cast<int>(c) << "), received " << c1 << " (" << static_cast<int>(c1) << '\n';
                     return 1;
                 }
             } 
         }
-        */
     }
     Timer flushTimer;
     flushTimer.reset();
