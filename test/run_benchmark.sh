@@ -14,24 +14,17 @@ if [[ ! ${2} == "write" && ! ${2} == "read" ]]; then
     exit 1
 fi
 
-if [[ -z ${SUB_NODES} ]]; then
-    SUB_NODES=$SLURM_JOB_NUM_NODES
+if [[ -z ${SLURM_PROCID} ]]; then
+    echo "Using SLURM_PROCID as rank..."
+    RANK=${SLURM_PROCID}
+else
+    echo "Using PMI_RANK as rank..."
+    RANK=${PMI_RANK}
 fi
 
-if [[ -z ${SUB_TASKS_PER_NODE} ]]; then
-    SUB_TASKS_PER_NODE=$SLURM_NTASKS_PER_NODE
-fi
+output="termout/${RANK}"
 
-EXEC=$(which srun)
-if [[ ! -z $EXEC ]]; then
-    EXEC="srun -N ${SUB_NODES} --ntasks-per-node=${SUB_TASKS_PER_NODE}"
-    echo "Using ${EXEC} as runner"
-else 
-    echo "Running locally"
-fi
-
-# gdb --args out/benchmark ${1} ${2}
-# valgrind --leak-check=full out/benchmark ${1} ${2}
-${EXEC} gdb -batch -ex "run" -ex "bt" --args out/benchmark ${1} ${2} &> backtrace_${PMI_RANK}
-# ${EXEC} valgrind out/benchmark ${1} ${2}
-# ${EXEC} out/benchmark ${1} ${2}
+date +%Y-%m-%d_%H-%M-%S >> $output
+echo "---- (run_benchmark.sh) Running benchmark below ----" >> $output
+out/benchmark ${1} ${2} >> $output 2>&1
+echo "---- (run_benchmark.sh) completed benchmark ----" >> $output

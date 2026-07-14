@@ -314,7 +314,7 @@ int main(int argc, char** argv) {
                         source_space_size,
                         NULL );
 
-                std::cout << "Rank " << my_rank << " performing io to region " << region_idx << ", offset: " << write_pos << ", size: " << region.size << std::endl;
+                // std::cout << "Rank " << my_rank << " performing io to region " << region_idx << ", offset: " << write_pos << ", size: " << region.size << std::endl;
 
                 /*
                 if(doWrite) {
@@ -347,6 +347,7 @@ int main(int argc, char** argv) {
                     return 1;
                 }
             } 
+            std::cout << "Read validated.\r\n";
         }
     }
     Timer flushTimer;
